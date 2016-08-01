@@ -11,6 +11,7 @@ from aiohttp import web
 from aiohttp_session import session_middleware
 from aiohttp_session.cookie_storage import EncryptedCookieStorage
 from cryptography.fernet import Fernet
+from concurrent.futures import ThreadPoolExecutor
 
 from . import views
 
@@ -44,6 +45,10 @@ class WebServer:
         self._app = web.Application(middlewares=middlewares)
         self._app.data_dir = data_dir
         self._app.credentials_file = credentials_file
+        self._app.ioloop = self._loop
+
+        self._executor = ThreadPoolExecutor(4)
+        self._loop.set_default_executor(self._executor)
 
         def jinja_url_helper(route_name, *args, **kwargs):
             return self._app.router[route_name].url(*args, **kwargs)
