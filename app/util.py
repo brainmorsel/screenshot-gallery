@@ -68,9 +68,15 @@ def list_last_uploads(dirname):
             with open(metadata_file) as f:
                 item = json.load(f)
                 item['name'] = name
-            item['last_upload'] = date_of_last_image(path)
-            item['last_upload_date'] = datetime.fromtimestamp(item['last_upload'])
-            item['marked'] = date_now - item['last_upload_date'] >= timedelta(days=7)
+            last_upload = date_of_last_image(path)
+            if last_upload:
+                item['last_upload'] = last_upload
+                item['last_upload_date'] = datetime.fromtimestamp(last_upload)
+                item['marked'] = date_now - item['last_upload_date'] >= timedelta(days=7)
+            else:
+                item['last_upload'] = 0
+                item['last_upload_date'] = None
+                item['marked'] = True
             result.append(item)
     result.sort(key=lambda item: item['last_upload'])
     return result

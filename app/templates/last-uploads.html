@@ -15,7 +15,7 @@
     <tr class="{{ 'marked' if item.marked else '' }}">
       <td>{{ item.display_name }}</td>
       <td>{{ item.name }}</td>
-      <td>{{ item.last_upload_date.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+      <td>{{ item.last_upload_date and item.last_upload_date.strftime('%Y-%m-%d %H:%M:%S') or 'None' }}</td>
     </tr>
     {% endfor %}
     </table>
