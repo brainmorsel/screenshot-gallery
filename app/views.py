@@ -1,5 +1,7 @@
 import os
 import json
+import ipaddress
+import logging
 
 from aiohttp import web
 from aiohttp_session import get_session
@@ -105,11 +107,24 @@ async def get_images_list(request):
 
 @handlers('/upload', methods=['POST'])
 async def upload_image(request):
+    peername = request.transport.get_extra_info('peername')
+    can_proceed = False
+    if peername is not None:
+        host, port = peername
+        for net in request.app.net_whitelist:
+            if ipaddress.ip_address(host) in net:
+                can_proceed = True
+                break
+
+    if not can_proceed:
+        return web.json_response({"status": "FAIL"})
+
     dirname = request.GET['dir']
     path = os.path.join(request.app.data_dir, dirname)
     await request.post()
     data_stream = request.POST['file'].file
     await request.app.ioloop.run_in_executor(None, util.save_image, data_stream, path)
+
     return web.json_response({"status": "OK"})
 
 

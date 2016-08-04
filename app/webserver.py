@@ -3,6 +3,7 @@ import logging
 import os
 import asyncio
 import signal
+import ipaddress
 
 import click
 import jinja2
@@ -35,7 +36,7 @@ class WebServer:
         self._handler = None
         self._app = None
 
-    async def start(self, host='127.0.0.1', port=8000, *, cookie_secret=None, data_dir=None, credentials_file=None):
+    async def start(self, host='127.0.0.1', port=8000, *, cookie_secret=None, data_dir=None, credentials_file=None, net_whitelist=None):
         # Fernet key must be 32 bytes.
         if cookie_secret is None:
             cookie_secret = base64.urlsafe_b64decode(Fernet.generate_key())
@@ -46,6 +47,9 @@ class WebServer:
         self._app.data_dir = data_dir
         self._app.credentials_file = credentials_file
         self._app.ioloop = self._loop
+
+        if net_whitelist is not None:
+            self._app.net_whitelist = [ipaddress.ip_network(net) for net in net_whitelist.split(',')]
 
         self._executor = ThreadPoolExecutor(4)
         self._loop.set_default_executor(self._executor)
@@ -84,7 +88,13 @@ class WebServer:
 @click.option('-c', '--credentials', 'credentials_file',
               type=click.Path(exists=True, dir_okay=False), required=True)
 @click.option('-b', '--bind', default='127.0.0.1:8000')
-def cli(data_dir, bind, credentials_file):
+@click.option('-n', '--net-whitelist', default='127.0.0.1/32')
+@click.option('-l', '--log-level', default='info')
+def cli(data_dir, bind, credentials_file, net_whitelist, log_level):
+    level = getattr(logging, log_level.upper())
+    logging.basicConfig(level=level,
+                        format='%(levelname)-8s %(message)s')
+
     host, port = bind.split(':')
 
     loop = asyncio.get_event_loop()
@@ -95,7 +105,7 @@ def cli(data_dir, bind, credentials_file):
         pass
 
     webserver = WebServer(loop=loop)
-    loop.run_until_complete(webserver.start(host, port, data_dir=data_dir, credentials_file=credentials_file))
+    loop.run_until_complete(webserver.start(host, port, data_dir=data_dir, credentials_file=credentials_file, net_whitelist=net_whitelist))
 
     try:
         loop.run_forever()
