@@ -62,7 +62,7 @@ class WebServer:
         self._app = web.Application(middlewares=middlewares)
         self._app.data_dir =  self._cfg.get('http', 'data', fallback='./data')
         default_creds = os.path.join(self._app.data_dir, 'credentials')
-        self._app.credentials_file = self._cfg.get('http', 'data', fallback=default_creds)
+        self._app.credentials_file = self._cfg.get('http', 'credentials', fallback=default_creds)
         self._app.ioloop = self._loop
         self._app.som_url_format = self._cfg.get('http', 'som-url', fallback=None)
         self._app.meta_data_cache = {}
