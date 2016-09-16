@@ -38,7 +38,7 @@ async def login(request):
 
     with open(request.app.credentials_file) as creds:
         for line in creds:
-            c_username, c_password, c_allowed = line.split(':')
+            c_username, c_password, c_allowed = line.split(':', maxsplit=2)
             if c_username == username and c_password == password:
                 session = await get_session(request)
                 session['username'] = username
