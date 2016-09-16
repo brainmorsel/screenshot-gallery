@@ -131,8 +131,8 @@ nav {
   <div class="wrap">
     <nav>
       <a href="/logout">Logout</a>
-      Date from
-      <input id="date-from" placeholder="YYYY-MM-DD HH:MM">
+      Date
+      <input id="date" placeholder="YYYY-MM-DD">
       <div class="selector"></div>
       </select>
     </nav>
@@ -172,17 +172,16 @@ ImagesNavigator.prototype.setCurrentDir = function (dirname) {
   }
   this.currentDir = dirname;
 
-  if ($('#date-from').val()) {
-    ts_from = new Date($('#date-from').val()).getTime() / 1000;
-    ts_to = ts_from + 3600*24;
+  if ($('#date').val()) {
+    date = $('#date').val();
   }
 
-  $.get('images', {dir: dirname, from: ts_from, to: ts_to}, function(data) {
+  $.get('images', {dir: dirname, date: date}, function(data) {
     var previews = $('.previews');
     previews.empty();
 
     self.currentImages = data.map(function(item, idx) {
-      var img_src = 'images/' + dirname + '/' + item.filename;
+      var img_src = item.filename;
       var date = format_timestamp(item.timestamp);
       var el_item = $('<div class="preview"><img src="'+img_src+'.thumbnail.jpeg"><div class="text">'+date+'</div></div>');
       el_item.click(function () {
@@ -268,7 +267,7 @@ ImagesNavigator.prototype.selectImage = function (idx) {
     return;
   }
   this.selectedImage = idx;
-  var title = format_timestamp(image.timestamp) + ' file: ' + this.currentDir + '/' + image.filename;
+  var title = format_timestamp(image.timestamp) + ' file: ' + image.filename;
   $('#spinner').show();
   $('#viewer').attr('src', image.img_src);
   $('#viewer-url').attr('href', image.img_src);
@@ -338,8 +337,8 @@ $( document ).ready(function() {
 
   $('#spinner').hide();
   $('#viewer').on('load', function () { $('#spinner').hide(); });
-  $('#date-from').val(format_date(new Date(new Date() - 3600*1000)));
-  $('#date-from').on('change', function () { window.__images_navigator.updateFilters(); });
+  $('#date').val(format_date(new Date(new Date() - 3600*1000)));
+  $('#date').on('change', function () { window.__images_navigator.updateFilters(); });
   $('#button-next').click(function () { window.__images_navigator.selectImageNext(); });
   $('#button-prev').click(function () { window.__images_navigator.selectImagePrev(); });
 });

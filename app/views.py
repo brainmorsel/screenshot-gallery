@@ -2,7 +2,9 @@ import os
 import json
 import ipaddress
 import logging
+from datetime import datetime
 
+import aiohttp
 from aiohttp import web
 from aiohttp_session import get_session
 from aiohttp_jinja2 import template
@@ -40,7 +42,7 @@ async def login(request):
             if c_username == username and c_password == password:
                 session = await get_session(request)
                 session['username'] = username
-                session['allowed'] = c_allowed.split()
+                session['allowed'] = [s.strip() for s in c_allowed.split(',')]
                 return web.HTTPFound('/')
     return {}
 
@@ -51,6 +53,20 @@ async def logout(request):
     session.invalidate()
 
     return web.HTTPFound('/login')
+
+
+async def _get_meta_data(request, name):
+    meta_data = None
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(request.app.som_url_format.format(ip_addr=name)) as resp:
+                r = await resp.json()
+                if r['success']:
+                    meta_data = r['result']
+                    request.app.meta_data_cache[name] = meta_data
+    except AttributeError:
+        pass  # no som_url_format in config
+    return meta_data
 
 
 @handlers('/dirs')
@@ -64,23 +80,21 @@ async def get_dirs_list(request):
     if not allowed:
         return web.json_response(result)
 
-    try:
-        with open(os.path.join(request.app.data_dir, 'groups.json')) as f:
-            groups = json.load(f)
-    except:
-        pass
-
     for name in os.listdir(request.app.data_dir):
-        if not (name in allowed or '*' in allowed):
-            continue
-
         path = os.path.join(request.app.data_dir, name)
         if os.path.isdir(path):
-            metadata_file = os.path.join(path, '.meta.json')
-            with open(metadata_file) as f:
-                item = json.load(f)
-                item['name'] = name
-                item['group_title'] = groups.get(item.get('group'))
+            item = {
+                'name': name,
+                'display_name': name,
+                'group': 'default',
+                'avatar_url': 'noavatar.png',
+            }
+            meta_data = await _get_meta_data(request, name)
+            if meta_data:
+                item['display_name'] = meta_data['lname'] + ' ' + meta_data['fname']
+                item['group'] = meta_data['group_name']
+
+            if name in allowed or '*' in allowed or item['group'] in allowed:
                 result.append(item)
 
     return web.json_response(result)
@@ -92,16 +106,19 @@ async def get_images_list(request):
     username = session.get('username')
     allowed = session.get('allowed')
     dirname = request.GET['dir']
-    date_from = request.GET.get('from')
-    date_to = request.GET.get('to')
+    date = request.GET.get('date')
 
     if not allowed:
         return web.json_response([])
-    if not (dirname in allowed or '*' in allowed):
+
+    group_name = (request.app.meta_data_cache.get(dirname) or {}).get('group_name')
+    can_proceed = dirname in allowed or '*' in allowed or group_name in allowed
+    if not can_proceed:
         return web.json_response([])
 
-    dirpath = os.path.join(request.app.data_dir, dirname)
-    images = await request.app.ioloop.run_in_executor(None, util.list_images, dirpath, date_from, date_to)
+    dirpath = os.path.join(request.app.data_dir, dirname, date)
+    url_prefix = os.path.join('/images', dirname, date)
+    images = await request.app.ioloop.run_in_executor(None, util.list_images, dirpath, url_prefix)
     return web.json_response(images)
 
 
@@ -119,11 +136,14 @@ async def upload_image(request):
     if not can_proceed:
         return web.json_response({"status": "FAIL"})
 
-    dirname = request.GET['dir']
-    path = os.path.join(request.app.data_dir, dirname)
+
+    name = request.GET.get('dir')
+    dir_date = datetime.now().strftime('%Y-%m-%d')
+
+    path = os.path.join(request.app.data_dir, host, dir_date)
     await request.post()
     data_stream = request.POST['file'].file
-    await request.app.ioloop.run_in_executor(None, util.save_image, data_stream, path)
+    await request.app.ioloop.run_in_executor(None, util.save_image, data_stream, path, name)
 
     return web.json_response({"status": "OK"})
 
@@ -132,4 +152,8 @@ async def upload_image(request):
 @template('last-uploads.html')
 async def get_last_uploads(request):
     result = await request.app.ioloop.run_in_executor(None, util.list_last_uploads, request.app.data_dir)
+    for item in result:
+        meta_data = await _get_meta_data(request, item['name'])
+        if meta_data:
+            item['display_name'] = '{} {} ({})'.format(meta_data['lname'], meta_data['fname'], meta_data['group_name'])
     return {'items': result}
