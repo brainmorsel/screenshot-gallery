@@ -18,13 +18,6 @@ html, body, .wrap {
 .viewer {
   flex: 1;
 }
-#viewer {
-  border: none;
-  max-height: 100%;
-  max-width: 100%;
-  margin: none;
-  padding: none;
-}
 nav {
   width: 250px;
   display: flex;
@@ -54,10 +47,10 @@ nav {
 .preview {
   cursor: pointer;
   position: relative;
-  margin: 5px;
+  margin: 0px;
   margin-left: 0;
   width: 200px;
-  max-height: 150px;
+  max-height: 200px;
   padding: 5px;
   background-color: #EEE;
 }
@@ -75,7 +68,7 @@ nav {
 }
 .preview img {
   max-width: 200px;
-  max-height: 250px;
+  max-height: 200px;
 }
 .viewer {
   display: flex;
@@ -83,6 +76,13 @@ nav {
 }
 #viewer-url {
   max-height: 70%;
+}
+#viewer {
+  border: none;
+  max-height: 480px;
+  max-width: 100%;
+  margin: none;
+  padding: none;
 }
 .viewer .header {
   display: flex;
