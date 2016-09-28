@@ -131,8 +131,11 @@ nav {
   <div class="wrap">
     <nav>
       <a href="/logout">Logout</a>
-      Date
-      <input id="date" placeholder="YYYY-MM-DD">
+      <div style="display: flex; align-items: center;">
+        Date
+        <input id="date" placeholder="YYYY-MM-DD">
+        <div class="button" id="button-date-change">Go</div>
+      </div>
       <div class="selector"></div>
       </select>
     </nav>
@@ -264,6 +267,8 @@ ImagesNavigator.prototype.selectImage = function (idx) {
 
   var image = this.currentImages[idx];
   if (!image) {
+    $('#viewer').hide();
+    $('#viewer-title').text('');
     return;
   }
   this.selectedImage = idx;
@@ -273,6 +278,7 @@ ImagesNavigator.prototype.selectImage = function (idx) {
   $('#viewer-url').attr('href', image.img_src);
   $('#viewer-title').text(title);
   image.el.addClass('selected');
+  $('#viewer').show();
 }
 
 ImagesNavigator.prototype.selectImageNext = function () {

@@ -64,7 +64,7 @@ class WebServer:
         default_creds = os.path.join(self._app.data_dir, 'credentials')
         self._app.credentials_file = self._cfg.get('http', 'credentials', fallback=default_creds)
         self._app.ioloop = self._loop
-        self._app.som_url_format = self._cfg.get('http', 'som-url', fallback=None)
+        self._app.som_url = self._cfg.get('http', 'som-url', fallback=None)
         self._app.meta_data_cache = {}
 
         net_whitelist = self._cfg.get('http', 'whitelist', fallback='127.0.0.1/32')

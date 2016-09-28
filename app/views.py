@@ -55,17 +55,38 @@ async def logout(request):
     return web.HTTPFound('/login')
 
 
-async def _get_meta_data(request, name):
-    meta_data = None
+async def _get_username_by_ip(request, ip_addr):
+    username = None
+    if request.app.som_url is None:
+        return None
+
+    url = request.app.som_url + '/integration/sg/username-by-ip/{ip}'.format(ip=ip_addr)
     try:
         async with aiohttp.ClientSession() as session:
-            async with session.get(request.app.som_url_format.format(ip_addr=name)) as resp:
+            async with session.get(url) as resp:
                 r = await resp.json()
                 if r['success']:
-                    meta_data = r['result']
-                    request.app.meta_data_cache[name] = meta_data
-    except AttributeError:
-        pass  # no som_url_format in config
+                    data = r['result']
+                    if data:
+                        username = data.get('username')
+    except aiohttp.errors.ClientOSError:
+        logging.warning('Connection to SOM failed.')
+
+    return username
+
+
+async def _get_meta_data(request, name):
+    meta_data = None
+    if request.app.som_url is None:
+        return None
+
+    url = request.app.som_url + '/integration/sg/employee-by-username/{username}'.format(username=name)
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url) as resp:
+            r = await resp.json()
+            if r['success']:
+                meta_data = r['result']
+                request.app.meta_data_cache[name] = meta_data
     return meta_data
 
 
@@ -136,24 +157,15 @@ async def upload_image(request):
     if not can_proceed:
         return web.json_response({"status": "FAIL"})
 
-
-    name = request.GET.get('dir')
     dir_date = datetime.now().strftime('%Y-%m-%d')
 
-    path = os.path.join(request.app.data_dir, host, dir_date)
+    username = await _get_username_by_ip(request, host)
+    if not username:
+        return web.json_response({"status": "FAIL"})
+
+    path = os.path.join(request.app.data_dir, username, dir_date)
     await request.post()
     data_stream = request.POST['file'].file
-    await request.app.ioloop.run_in_executor(None, util.save_image, data_stream, path, name)
+    await request.app.ioloop.run_in_executor(None, util.save_image, data_stream, path)
 
     return web.json_response({"status": "OK"})
-
-
-@handlers('/last-uploads')
-@template('last-uploads.html')
-async def get_last_uploads(request):
-    result = await request.app.ioloop.run_in_executor(None, util.list_last_uploads, request.app.data_dir)
-    for item in result:
-        meta_data = await _get_meta_data(request, item['name'])
-        if meta_data:
-            item['display_name'] = '{} {} ({})'.format(meta_data['lname'], meta_data['fname'], meta_data['group_name'])
-    return {'items': result}
