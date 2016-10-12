@@ -155,12 +155,14 @@ async def upload_image(request):
                 break
 
     if not can_proceed:
+        logging.warning("peer %s can't upload by whitelist restrictions", peername)
         return web.json_response({"status": "FAIL"})
 
     dir_date = datetime.now().strftime('%Y-%m-%d')
 
     username = await _get_username_by_ip(request, host)
     if not username:
+        logging.warning("can't get username for %s", host)
         return web.json_response({"status": "FAIL"})
 
     path = os.path.join(request.app.data_dir, username, dir_date)
@@ -168,4 +170,5 @@ async def upload_image(request):
     data_stream = request.POST['file'].file
     await request.app.ioloop.run_in_executor(None, util.save_image, data_stream, path)
 
+    logging.info('for %s (%s) file saved successfull', host, username)
     return web.json_response({"status": "OK"})
