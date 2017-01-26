@@ -114,6 +114,7 @@ async def get_dirs_list(request):
             if meta_data:
                 item['display_name'] = meta_data['lname'] + ' ' + meta_data['fname']
                 item['group'] = meta_data['group_name']
+                item['group_title'] = meta_data['group_display_name']
 
             if name in allowed or '*' in allowed or item['group'] in allowed:
                 result.append(item)

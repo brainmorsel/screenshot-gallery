@@ -242,6 +242,21 @@ ImagesNavigator.prototype.loadDirList = function () {
 
   self.dirs = {};
   $.get('dirs', function(data) {
+    data.sort(function (a, b) {
+      if (a.group_title < b.group_title) {
+        return -1;
+      }
+      if (a.group_title > b.group_title) {
+        return 1;
+      }
+      if (a.display_name < b.display_name) {
+        return -1;
+      }
+      if (a.display_name > b.display_name) {
+        return 1;
+      }
+      return 0;
+    });
     data.map(function (item) {
       var el = $('<div class="button"><div class="avatar"><img src="'+item.avatar_url+'"></div><div>'+item.display_name+'</div></div>');
       el.click(function () { self.setCurrentDir(item.name); });
