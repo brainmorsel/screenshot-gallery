@@ -3,6 +3,7 @@ import json
 import ipaddress
 import logging
 from datetime import datetime
+import time
 
 import aiohttp
 from aiohttp import web
@@ -165,6 +166,18 @@ async def upload_image(request):
     if not username:
         logging.warning("can't get username for %s", host)
         return web.json_response({"status": "FAIL"})
+
+    last_upload_marker = os.path.join(request.app.data_dir, username, '.last_upload')
+    try:
+        st = os.stat(last_upload_marker)
+        last_upload_ts = st.st_ctime
+    except FileNotFoundError:
+        last_upload_ts = 0
+
+    if time.time() - last_upload_ts < 60:
+        logging.warning("user %s can't upload so often, ignore file", username)
+        return web.json_response({"status": "FAIL", "error": "too often"})
+    util.touch(last_upload_marker)
 
     path = os.path.join(request.app.data_dir, username, dir_date)
     await request.post()
