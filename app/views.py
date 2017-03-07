@@ -177,7 +177,10 @@ async def upload_image(request):
     if time.time() - last_upload_ts < 60:
         logging.warning("user %s can't upload so often, ignore file", username)
         return web.json_response({"status": "FAIL", "error": "too often"})
-    util.touch(last_upload_marker)
+    try:
+        util.touch(last_upload_marker)
+    except FileNotFoundError:
+        pass  # нет пока директории, пофиг
 
     path = os.path.join(request.app.data_dir, username, dir_date)
     await request.post()
